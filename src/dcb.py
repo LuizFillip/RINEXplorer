@@ -1,7 +1,5 @@
-import os
 import pandas as pd
 from constants import constants as const
-import numpy as np
 
 def find_element(data, header):
     """Find the header (like string) and the data body"""

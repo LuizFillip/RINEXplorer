@@ -1,4 +1,4 @@
-import GNSS as gs
+import RINExplorer as gs
 import numpy as np
 import pandas as pd
 import os
@@ -85,11 +85,6 @@ class RINEX21(object):
         return  df
     
     
-# infile = gs.paths(2021, 179).fn_rinex('amte')
-# infile = gs.paths(2022, 18).fn_rinex('ceeu')
-
-# RINEX21(infile).dataset
-# 
 
 
 

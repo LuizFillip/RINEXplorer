@@ -1,5 +1,4 @@
-import GNSS as gs
-
+import RINExplorer as gs
 
 def _check_prns_in_string(dummy_string):
     

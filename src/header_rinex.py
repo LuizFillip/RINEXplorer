@@ -1,6 +1,6 @@
 import typing as T
 import os
-import GNSS as gs
+import RINExplorer as gs
 import pandas as pd
 
 

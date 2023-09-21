@@ -1,6 +1,6 @@
 import datetime as dt
 import numpy as np
-import GNSS as gs
+import RINExplorer as gs
 import pandas as pd
 
 def check_if_prns_string(dummy_string):

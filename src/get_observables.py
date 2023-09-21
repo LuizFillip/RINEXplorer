@@ -1,7 +1,5 @@
-import GNSS as gs
+import RINExplorer as gs
 import numpy as np
-
-
 
 def observables_sections(ds):
     

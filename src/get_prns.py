@@ -1,8 +1,6 @@
-import GNSS as gs
+import RINExplorer as gs
 
 
-        
-        
 def get_prns_section(
         prns_list, 
         num_sats, 

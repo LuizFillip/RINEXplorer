@@ -1,14 +1,20 @@
-# GNSS (data pipeline)
+# RINexplorer
 
-This repository aims to describe the processing of GNSS data in order to obtain TEC from RINEX files and your projection in the ionosphere. See IBGE and NASA orbit repository
+This repository contains Python scripts and tools for reading RINEX (Receiver Independent Exchange) and SP3 (Standard Precision Positioning) files to extract GNSS (Global Navigation Satellite System) observables such as pseudorange, carrier phase, and more.
 
-- Read RINEX, orbits (Sp3 and MGEX) and DCB (bias) files
-- Compute slant TEC 
-- Compute TEC time variation
-- Cycle-slips correction 
-- Compute ionospheric piercing point
-- save receivers coordinates
-- Get the best combinations for pseudoranges and phases
+## Getting Started
 
+These instructions will help you get started with using the provided scripts to process GNSS data in RINEX and SP3 formats.
 
+### Prerequisites
 
+Make sure you have the following prerequisites installed:
+
+- Python 3.x
+- NumPy
+- SciPy
+
+You can install NumPy and SciPy using `pip`:
+
+```bash
+pip install numpy scipy
