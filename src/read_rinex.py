@@ -4,15 +4,6 @@ import numpy as np
 import GNSS as gnss
 
 
-"""
-Verificar o caso de não encontrar nenhum PRN
-for i, elem in enumerate(sat_epoch):
-    if ' 15  1  1  0 1' in elem:
-        print(i)
-        
-sat_epoch[812]
-"""
-
 
 
 

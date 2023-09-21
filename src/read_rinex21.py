@@ -8,6 +8,16 @@ import typing as t
 RINEX files with missing epochs (time and data)
 files with epoch (time information) but without data
 """
+"""
+Verificar o caso de não encontrar nenhum PRN
+for i, elem in enumerate(sat_epoch):
+    if ' 15  1  1  0 1' in elem:
+        print(i)
+        
+sat_epoch[812]
+"""
+
+
 
 def dataset(data: str):
     
