@@ -32,7 +32,8 @@ def load_dcb(infile: str) -> pd.DataFrame:
     
     header = "*BIAS"
     count = find_element(data, header = header)
-    header = [i.replace("_", "").lower() for i in data[count:][0].split()]
+    header = [i.replace("_", "").lower() 
+              for i in data[count:][0].split()]
     
     data_result = []
     
@@ -52,10 +53,11 @@ def get_cdb_value(infile, prn):
     df = load_dcb(infile)
     
     try:
-        est_value = df.loc[(df["obs1"] == "C1W") & 
-                     (df["obs2"] == "C2W") &
-                     (df["prn"] == prn),  
-                     "estimatedvalue"]    
+        est_value = df.loc[
+            (df["obs1"] == "C1W") & 
+            (df["obs2"] == "C2W") &
+            (df["prn"] == prn),  
+            "estimatedvalue"]    
         
         if len(est_value) == 0:
             value = 0
@@ -64,10 +66,11 @@ def get_cdb_value(infile, prn):
         
     except:
         
-        est_value = df.loc[(df["obs1"] == "C2C") & 
-                     (df["obs2"] == "C2W") &
-                     (df["prn"] == prn),  
-                     "estimatedvalue"]    
+        est_value = df.loc[
+            (df["obs1"] == "C2C") & 
+            (df["obs2"] == "C2W") &
+            (df["prn"] == prn),  
+            "estimatedvalue"]    
         
         value = float(est_value)
         

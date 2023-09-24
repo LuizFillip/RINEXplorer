@@ -1,4 +1,4 @@
-import RINExplorer as gs
+import RINExplorer as rx
 
 
 def get_prns_section(
@@ -45,8 +45,8 @@ def is_int(num):
     
     
 def check_prns(
-        prn_list, 
-        num_sats
+        prn_list: list[str], 
+        num_sats: list[str]
         ):
     if len(prn_list) != num_sats:
         raise ValueError(
@@ -72,14 +72,14 @@ def join_prns_epochs(
                     )
                 
             num_sats = int(element[:2])
-            prn_list = gs.split_prns(element[2:])
+            prn_list = rx.split_prns(element[2:])
             out.append(prn_list)
             check_prns(prn_list, num_sats)
             
         else:
             try:
                 num_sats = int(ln[:1])
-                prn_list = gs.split_prns(ln[1:])
+                prn_list = rx.split_prns(ln[1:])
                 out.append(prn_list)
                 
                 check_prns(prn_list, num_sats)

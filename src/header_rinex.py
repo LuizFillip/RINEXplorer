@@ -1,6 +1,6 @@
 import typing as T
 import os
-import RINExplorer as gs
+import RINExplorer as rx
 import pandas as pd
 
 
@@ -9,8 +9,8 @@ def get_time_range(t):
     interval = int(float(t['interval']))
             
     return pd.date_range(
-        gs.get_datetime(t['time']),
-        gs.get_datetime(t['time_end']), 
+        rx.get_datetime(t['time']),
+        rx.get_datetime(t['time_end']), 
         freq = f"{interval}s"
         )
 
@@ -144,9 +144,7 @@ class HEADER(object):
              
                dic['obs'].extend(
                    ln[:ln.find('#')].split()
-                                 )
-               
-               
+                                 ) 
         
            if "INTERVAL" == infos_reader.strip():
                 dic["interval"] = infos[:19].strip()
@@ -157,7 +155,7 @@ class HEADER(object):
         return dic
    
   
-infile = 'D:\\database\\GNSS\\rinex\\peru_2\\2013\\003\\lji_0030.13o'
+infile = "D:\\database\\GNSS\\rinex\\peru_2\\2012\\230\\lhyo2300.12o"
 
 # lines = open(infile, "r").read()
 
@@ -169,7 +167,7 @@ infile = 'D:\\database\\GNSS\\rinex\\peru_2\\2013\\003\\lji_0030.13o'
 
 
 
-HEADER(infile)
+# HEADER(infile).attrs
 
 
    

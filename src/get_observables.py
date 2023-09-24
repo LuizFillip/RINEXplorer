@@ -7,9 +7,9 @@ def observables_sections(ds):
     num = ds.number_of_obs
     
     
-    if num <= 5:
+    if num < 6:
         length = 1
-    elif (num > 6) and (num < 11):
+    elif (num >= 6) and (num < 11):
         length = 2
     elif (num >= 11) and (num <= 16):
         length = 3
