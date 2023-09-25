@@ -17,4 +17,4 @@ Make sure you have the following prerequisites installed:
 You can install NumPy and SciPy using `pip`:
 
 ```bash
-pip install numpy scipy
+pip install RINExplorer
