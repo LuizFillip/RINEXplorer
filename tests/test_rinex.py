@@ -1,9 +1,29 @@
 import RINExplorer as rx
+import GNSS as gs 
 
-PATH = "D:\\database\\GNSS\\rinex\\peru_2\\2012\\230\\lji_2300.12o"
 
-df = rx.RINEX21(PATH)
 
-prn = df.prns[0]
-prn = 'G05'
-df.sel(prn).sort_index()
+            
+station = 'lji_'
+
+path_in = gs.paths(2013, 3).fn_rinex(
+    station, index = 0)
+
+def test_rinex():
+    
+    return rx.RINEX21(path_in)
+     
+    
+
+def test_load_receiver():
+
+    obs = gs.load_receiver(path_in)
+    
+    prn = obs.prns[3]
+    
+    ds = gs.data_tec(
+        obs, 
+        prn, 
+        station
+        )
+    
