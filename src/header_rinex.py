@@ -2,7 +2,7 @@ import typing as T
 import os
 import RINExplorer as rx
 import pandas as pd
-
+import GNSS as gs
 
 def get_time_range(t):
        
@@ -58,21 +58,27 @@ class HEADER(object):
     @staticmethod
     def header_lisn(lines):
         
+        def get_site(ln, dic):
+            if 'Location' in infos:
+                dic['site'] = ln[9:60].strip()
+        
         def get_obs(name, dic):
             if name == infos_reader:
                dic['obs'].extend(infos.split())
             
-
         def get_interval(name, dic):
             iname = name.lower()    
             if name == infos_reader:
                 dic[iname] = infos[:19].strip()
                 
+        def get_version(ln, dic):
+            if 'RINEX VERSION' in infos_reader:
+                dic['version'] = ln[:10].strip()
+                
                 
         def get_info(name, dic):
             iname = name.lower().replace(' ', '_')
-            
-            if name == infos_reader:
+            if name in infos_reader:
                 dic[iname] = infos[:47].strip().split()
         
         dic = {'obs': []}
@@ -81,13 +87,14 @@ class HEADER(object):
            
            infos = ln[:60]
            infos_reader = ln[60:].strip()
-         
+           get_version(ln, dic)
+           get_info(ln, dic)     
+           get_site(ln, dic)
            get_interval('INTERVAL', dic)
-              
            get_info('TIME OF LAST OBS', dic)
            get_info('TIME OF FIRST OBS', dic)
            get_info('APPROX POSITION XYZ', dic)
-           
+           get_info('Location:', dic)
            get_obs('# / TYPES OF OBSERV', dic)
         
         
@@ -155,19 +162,13 @@ class HEADER(object):
         return dic
    
   
-infile = "D:\\database\\GNSS\\rinex\\peru_2\\2012\\230\\lhyo2300.12o"
-
-# lines = open(infile, "r").read()
-
-# lines = lines[:lines.find("END OF HEADER")]
-            
-# station = os.path.split(infile)[-1][:4]
+path = gs.paths(2021, 2)
 
 
+infile = path.fn_rinex('alar', index = 1)
+infile = path.fn_rinex('lhyo', index = 0)
 
-
-
-# HEADER(infile).attrs
+HEADER(infile).attrs
 
 
    
