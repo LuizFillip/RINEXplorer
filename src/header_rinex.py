@@ -162,13 +162,13 @@ class HEADER(object):
         return dic
    
   
-path = gs.paths(2021, 2)
+# path = gs.paths(2021, 1)
 
 
-infile = path.fn_rinex('alar', index = 1)
-infile = path.fn_rinex('lhyo', index = 0)
+# infile = path.fn_rinex('alar', index = 1)
+# infile = path.fn_rinex('psga', index = 0)
 
-HEADER(infile).attrs
+# HEADER(infile).attrs
 
 
    

@@ -116,16 +116,3 @@ def test_mgex(infile):
             continue
         
 
-
-def test_sata():
-    infile = "D:\\database\\GNSS\\orbit\\2022\\cod\\"
-    # "D:\database\GNSS\orbit\2022\cod\"
-    fname = "cod21906.eph_r"
-    fname = 'com22120.eph'
-    file = (infile + fname)
-    
-    string_data = open(file, "r")
-    
-    data, time, prns = get_epochs(string_data)
-    
-# mgex(infile + fname)
