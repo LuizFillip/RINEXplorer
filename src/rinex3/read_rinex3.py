@@ -3,7 +3,6 @@ import numpy as np
 import datetime
 import pandas as pd
 from read_rinex import header
-from .settings import remove_values
 
 
 
@@ -300,19 +299,5 @@ class RINEX3(object):
         return pd.DataFrame(dat, columns = columns)
     
   
-
-
-def main():
-    infile = "database/rinex/ALMA00BRA_R_20182440000_01D_15S_MO.rnx"
-
-    ge = rinex3(infile)
-
-    df = ge.load(mode = "pseudorange", gnss = "G")
-    
-    #df["time"] = pd.to_datetime(df["time"])
-    print(df)
-    #print(ge._get_gnss_types(gnss = "G"))
-    
-    #plt.plot(df1["time"], df1["L8X"])        
 
 
