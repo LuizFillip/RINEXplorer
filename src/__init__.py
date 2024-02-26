@@ -1,3 +1,6 @@
+from .rinex3 import *
+from .rinex2 import *
+
 from .sp3 import sp3
 from .mgex import mgex
 from .read_rinex import RINEX2
