@@ -1,4 +1,4 @@
-def join_obs_types(obs_types):
+def join_obs_types(obs_types, only_prn = True):
     
     types_joined = {}
     
@@ -10,13 +10,20 @@ def join_obs_types(obs_types):
             joined = ' '.join([first_type, second_type])
         else:
             joined = ln.strip()
+        
+        if only_prn:
+            key = joined[0]
+        else:
+            key = joined[:7]
             
-        types_joined[joined[:7]] = joined[7:].split()
+        types_joined[key] = joined[7:].split()
         
     return types_joined
     
 
-def _check_length_of_observables(obs_types_joined):
+def _check_length_of_observables(obs_types):
+    
+    obs_types_joined = join_obs_types(obs_types, only_prn = False)
     
     for key, values in obs_types_joined.items():
         constelation, number_of_obs = tuple(key.split())
