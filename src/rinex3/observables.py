@@ -1,16 +1,13 @@
 import RINExplorer as rx
 import numpy as np 
-import pandas as pd
 
 
-
-
-
-class data_epochs:
+class data_epochs(object):
     
     def __init__(self, path_file):
         
-        self.obs_types = rx.HeaderRINEX3(path_file).obs_types
+        self.header = rx.HeaderRINEX3(path_file)
+        self.obs_types = self.header.obs_types
 
         self.CONSTELLATIONS = self.obs_types.keys()
         self.lines = open(path_file, 'r').readlines()
@@ -19,8 +16,9 @@ class data_epochs:
     @property
     def empty_list(self):
         return {key: [] for key in self.CONSTELLATIONS}
-
-    def epoch_and_prn_count(lines):
+    
+    @staticmethod
+    def prn_number_and_time(self, lines):
         
         time_sections = {}
         number_of_prn = {}
@@ -62,6 +60,7 @@ class data_epochs:
                 if obs_line[0] == key:
                     sep_epoch[key].append(obs_line)
                     count[key] += 1
+                    
         return sep_epoch, count
                 
     def get_arrays_in_epoch(self, const, sep_epoch, count):
@@ -89,9 +88,9 @@ class data_epochs:
       
         return list(zip(*[[time] * len(prn_list), prn_list]))
 
-    
+    @property
     def data_section(self):
-        number_of_prn, time_sections = self.epoch_and_prn_count(self.lines)
+        number_of_prn, time_sections = self.prn_number_and_time(self.lines)
     
         rows = list(number_of_prn.keys())
             
@@ -99,7 +98,7 @@ class data_epochs:
         out_lli = self.empty_list
         out_ssi = self.empty_list
         out_idx = self.empty_list
-        
+        out_prn = self.empty_list
         
         for i, total_sats in enumerate(number_of_prn.values()):
           
@@ -119,8 +118,8 @@ class data_epochs:
                 obs, lli, ssi, prn_list = self.get_arrays_in_epoch(
                     const, sep_epoch, count
                     )
-                
-                out_idx[const].extend(self.built_index(time, prn_list))
+                out_prn[const].extend(prn_list)
+                out_idx[const].extend([time] * len(prn_list))
                 out_obs[const].extend(obs)
                 out_lli[const].extend(lli)
                 out_ssi[const].extend(ssi)
@@ -130,7 +129,7 @@ class data_epochs:
         out_lli = self.concat_values_in_dict(out_lli)
         out_ssi = self.concat_values_in_dict(out_ssi)
         
-        return out_idx, out_obs, out_lli, out_ssi
+        return out_prn, out_idx, out_obs, out_lli, out_ssi
         
     
 
