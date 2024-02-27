@@ -1,6 +1,6 @@
 import RINExplorer as rx
 import pandas as pd 
-
+import numpy as np
 
 class RINEX3(object):
     
@@ -9,39 +9,48 @@ class RINEX3(object):
         
         
         ep = rx.data_epochs(path_file)
-        self.obs_types = ep.obs_types
+        self.types = ep.obs_types
         self.header = ep.header
         self.prn, self.index, self._obs, self._lli, self._ssi = ep.data_section
         
-        
+    def prns(self, const = 'G'):
+        return np.unique(self.prn[const])
+    
     @staticmethod
     def dataset(values, obs_names, index, prn):
-        df = pd.DataFrame(values, columns = obs_names, index = index)
+        df = pd.DataFrame(
+            values, 
+            columns = obs_names, 
+            index = index
+            )
         df['prn'] = prn
         return df
 
     def obs(self, const = 'G'):
         return self.dataset(
             self._obs[const], 
-            self.obs_types[const], 
+            self.types[const], 
             self.index[const], 
-            self.prn[const])
+            self.prn[const]
+            )
 
     def lli(self, const = 'G'):
         return self.dataset(
             self._lli[const], 
-            self.obs_types[const], 
+            self.types[const], 
             self.index[const], 
-            self.prn[const])
+            self.prn[const]
+            )
 
     def ssi(self, const = 'G'):
         return self.dataset(
             self._ssi[const], 
-            self.obs_types[const], 
+            self.types[const], 
             self.index[const], 
             self.prn[const])
-
-    def sel(df, prn):            
+    
+    @staticmethod
+    def sel(self, df, prn):            
         return df.loc[df["prn"] == prn]
 
  
@@ -59,4 +68,6 @@ path_file = infile + filename
 
 df = RINEX3(path_file)
 
-df.obs(const = 'R')
+ds = df.obs(const = 'R')
+
+df.sel()
