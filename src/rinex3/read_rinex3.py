@@ -38,14 +38,15 @@ class RINEX3(object):
         df['prn'] = self.prn[const]
         
         if drop_ssi:
-            columns = [col for col in df.columns if 'S' in col]
+            columns = [col for col in df.columns 
+                       if ('S' in col) or ('D' in col)]
             df = df.drop(columns = columns)
         
         
         return df
 
     
-    def sel(self, prn, num = 0, drop_ssi = True):           
+    def sel(self, prn, sel = 1, drop_ssi = True):           
         
         
         df = self.obs(
@@ -61,7 +62,8 @@ class RINEX3(object):
                         
         df = df.drop(columns = columns_with_all_nan)
         
-        cols = rx.filter_columns(df)[num]
+
+        cols = rx.filter_columns(df, sel = sel)
         
         lli = self.obs(
             values = 'lli', 
@@ -69,13 +71,13 @@ class RINEX3(object):
             drop_ssi = drop_ssi
             )
         
+        lli_cols = [f'{c}' for c in cols if 'L' in c]
+        
+        lli = lli.loc[lli["prn"] == prn, lli_cols]
+        
         lli.columns = [f'{c}lli' for c in lli.columns]
-        lli_cols = [f'{c}lli' for c in cols if 'L' in c]
         
-        lli = lli.loc[lli["prnlli"] == prn, lli_cols]
-        
-        
-        return pd.concat([df.loc[:, cols], lli], axis = 1)
+        return pd.concat([df.loc[:, cols], lli], axis = 1).dropna()
         
 
  
@@ -87,7 +89,7 @@ def main():
     infile = 'G:\\Meu Drive\\Python\\data-analysis\\database\\GNSS\\'
     
     filename = 'AREG00PER_R_20190860000_01D_30S_MO.rnx'
-    filename = 'GLPS00ECU_R_20220010000_01D_30S_MO.rnx'
+    # filename = 'GLPS00ECU_R_20220010000_01D_30S_MO.rnx'
     
     path_file = infile + filename 
     
@@ -96,5 +98,4 @@ def main():
     prn = 'G01'
     
     df = rinex.sel(prn)
-    
     df
