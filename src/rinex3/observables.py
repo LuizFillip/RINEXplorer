@@ -18,7 +18,7 @@ class data_epochs(object):
         return {key: [] for key in self.CONSTELLATIONS}
     
     @staticmethod
-    def prn_number_and_time(self, lines):
+    def prn_number_and_time(lines):
         
         time_sections = {}
         number_of_prn = {}
