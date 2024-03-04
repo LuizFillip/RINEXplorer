@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sun Feb 25 20:52:59 2024
-
-@author: Luiz
-"""
-
+from .header import headerRINEX2
+from .observables import obs2
+from .read_rinex2 import rinex2

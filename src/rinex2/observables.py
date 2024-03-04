@@ -84,7 +84,6 @@ def prn_time_and_data(lines):
 
 def get_observables(data, num_of_obs):
     
-    data = join_epoch_rows(data, num_of_obs)
     total_sats = len(data)
     obs = np.empty((total_sats, num_of_obs), 
                    dtype = np.float64) * np.NaN
@@ -104,25 +103,9 @@ def get_observables(data, num_of_obs):
 def test_lengths(prns_list, time_list, data):
     assert len(prns_list) == len(time_list) == len(data)
     
+def test_length_element(data):
+    return list(set([len(ln) for ln in data]))
 
-def join_epoch_rows(data, num_of_obs):
-    
-    if  num_of_obs < 6:
-        length = 1
-    elif (num_of_obs >= 6) and (num_of_obs < 11):
-        length = 2
-    elif (num_of_obs >= 11) and (num_of_obs <= 16):
-        length = 3
-    elif  num_of_obs > 16:
-        length = 5
-
-    out = []
-    for i in range(0, len(data), length):
-        item = ''.join(data[i: i + length])
-        out.append(item)
-       
-        
-    return out
 
 def extend_lists(time_prns):
     
@@ -135,104 +118,54 @@ def extend_lists(time_prns):
         
     return time_list, prns_list
 
-def test_length_element(data):
-    return list(set([len(ln) for ln in data]))
 
-
-infile = 'database/GNSS/rinex/areg0170.13o'
-num_of_obs = 21
-
-# infile = 'database/GNSS/rinex/iqqe0010.13o'
-# num_of_obs = 7
-
-lines = open(infile, 'r').readlines()
-
-
-
-time_prns, data, indexes = prn_time_and_data(lines)
-
-# obs, lli, ssi = get_observables(data, num_of_obs)            
-
-# data = join_epoch_rows(data, num_of_obs)
-# 
-# time_list, prns_list = extend_lists(time_prns)
-
-
-
+def get_length(num_of_obs):
     
-
-# out1 = []
-# for index in range(len(ss) - 1):
-    
-#     i, u = ss[index] 
-#     j, v = ss[index + 1]
-    
-#     section = data[i - (u * index): 
-#                     j - v - (u * index)]
-    
-#     # if len(section) == 0:
-#     #     print(i)
-#     # if (len(section) == 0):
-#     #     print(i, u, j, v, index)
+    if  num_of_obs < 6:
+        length = 1
+    elif (num_of_obs >= 6) and (num_of_obs < 11):
+        length = 2
+    elif (num_of_obs >= 11) and (num_of_obs <= 16):
+        length = 3
+    elif (num_of_obs > 16) and (num_of_obs <= 20):
+        length = 4
+    else:
+        length = 5
         
-#     out = []
-#     for ii in range(0, len(section), length):
-#         obs_line = ''.join(section[ii: ii + length])
-#         out.append(obs_line)
-   
-#     if len(out) !=0:
+    return length
         
-#         out1.append(out)
-#     else:
-#         out1.append([float('nan')])
         
-    
-# index = 2866
-# i, u, j, v = 353225, 2 ,353332, 2
 
-# section = data[i: i + 10]
-# row_idx = sorted(list(set(indexes.values())))
-# count = 0
-# count1 = 0
-# for ii, (time, index) in enumerate(indexes.items()):
-#     if ii + 1 == len(row_idx):
-#         break
-#     i, u = index
-#     j, v = row_idx[ii + 1]
-#     section = data[i - (u * ii):  j - v - (u * ii)]
+def get_data_rows(data, time_prns, num_of_obs):
+    length = get_length(num_of_obs)
+    start = 0
+    out = []
     
-#     # if len(section) !=0:
-#     #     print(index, time)
+    for p in list(time_prns.values()):
         
-#     if i == 345858:
-#         print(i)
+        n_sats = len(p) * length
+        slice_data = data[start: start + n_sats]
         
-    
-    
-# for time, prn in time_prns.items():
-    
-#     n_sats = len(prn)
+        for i in range(0, len(slice_data), length):
+            item = ''.join(slice_data[i: i + length])
+            out.append(item)
+        
+        start += n_sats
+        
+    return out
 
-#     #
 
-if  num_of_obs < 6:
-    length = 1
-elif (num_of_obs >= 6) and (num_of_obs < 11):
-    length = 2
-elif (num_of_obs >= 11) and (num_of_obs <= 16):
-    length = 3
-elif num_of_obs > 16:
-    length = 5
+
+
+class obs2:
     
-    
-prn = list(time_prns.values())
+    def __init__(self, lines, num_of_obs):
+                
+        time_prns, data, indexes = prn_time_and_data(lines)
+        
+        self.time_list, self.prns_list = extend_lists(time_prns)
+        
+        data = get_data_rows(data, time_prns, num_of_obs)
+        
+        self.obs, self.lli, self.ssi = get_observables(data, num_of_obs)            
 
-start = 0
-out = []
-for p in prn:
-    n_sats = len(p) * length
-    slice_data = data[start:start+n_sats]
-    out.append(''.join(slice_data))
-    start += n_sats
-
-out
