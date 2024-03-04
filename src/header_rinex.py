@@ -81,7 +81,7 @@ class HEADER(object):
         station = os.path.split(infile)[-1][:4]
         
         if 'lisn' in lines:
-            attrs = {station: self.header_lisn(lines)}
+            attrs = {station: header_lisn(lines)}
         else:
             attrs = {station: self.header_rinex2(lines)}
         

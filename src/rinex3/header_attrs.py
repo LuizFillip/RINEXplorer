@@ -63,8 +63,12 @@ def main():
     infile = 'G:\\Meu Drive\\Python\\data-analysis\\database\\GNSS\\'
     
     filename = 'AREG00PER_R_20190860000_01D_30S_MO.rnx'
-    filename = 'GLPS00ECU_R_20220010000_01D_30S_MO.rnx'
+    # filename = 'GLPS00ECU_R_20220010000_01D_30S_MO.rnx'
     
     
     path = infile + filename
-    HeaderRINEX3(path).obs_types
+    he = HeaderRINEX3(path).header 
+    
+    print(he)
+    
+# main()

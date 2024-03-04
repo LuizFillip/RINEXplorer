@@ -42,10 +42,6 @@ def get_datetime(string_time: str) -> dt.datetime:
                     int(float(t[5])))
 
 
-def split_prns(item: str) -> list:
-    """Split PRNs string sequence into list"""
-    return [item[num - 3: num] for num in 
-            range(3, len(item[2:]) + 3, 3)]
 
 
 def complete_line(obs_line, length = 78):

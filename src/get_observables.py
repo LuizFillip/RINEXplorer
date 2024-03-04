@@ -73,12 +73,3 @@ def get_observables_rinex21(ds):
             #ssi[i, j] = gs.digitorzero(p3)
             
     return obs, lli#, ssi
-
-
-
-
-# ds = gs.DataSections(infile)
-
-# ds
-
-# get_observables_rinex21(ds)

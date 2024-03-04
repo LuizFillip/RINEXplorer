@@ -1,53 +1,58 @@
-channels = {'C': [], 'W': [], 'X': [], 
-               'L': [], 'Z': [], 'I': [], 
-               'E': [], 'P': [], 'Q': [], 
-               'A': [], 'B': [], 'M': [], 
-               'N': [], 'Y': []}
-   
 
-def observation_codes_pairs(df):
-    codes = {'L': [], 'C': []}
+def combine_pairs_phase(codes):
     
-    for col in df.columns:
-        if col == 'prn':
-            continue
-        
-        for code in codes.keys():
-            if code == col[0]:
-                codes[code].append(col)
-                
-    return codes 
-                
-
-
-
-def filter_columns(df, sel = 1):
-    
-    codes = observation_codes_pairs(df)
-    
-    comb = combine_pairs(codes)
-    
-    if sel == 1:
-        sel_cols = list(comb[1][0] + comb[2][0])
-    else:
-        sel_cols = list(comb[1][0] + comb[5][0])
-    
-    return sel_cols
-
-def combine_pairs(codes):
-    
-    out = {1: [], 2: [], 5: []}
+    channels = {
+        'C': [], 'S': [], 'L': [],
+        'W': [], 'X': [], 
+        'Z': [], 'I': [], 
+        'E': [], 'P': [], 'Q': [], 
+        'A': [], 'B': [], 'M': [], 
+        'N': [], 'Y': []}
+       
     
     for l in codes['L']:
-        for c in codes['C']:
-            if l[1] != c[1]:
-                continue
-            if l[2] == c[2]:
-                for key in out.keys():
-                    if key == int(l[1]):
-                        out[key].append((l, c))
-                        
-    return out 
+        for key in channels.keys():
+            if key == l[2]:
+                channels[key].append(l)
+            
+    return {k: v for k, v in channels.items() if v}
+    
+
+def remove_pseudos(comb_list):
+
+    new_list = []
+    for elem in comb_list:
+        obj = [o[0] == 'L' for o in elem]
+        if all(obj):
+            new_list.append(elem)
+            
+    return sorted(new_list) 
+
+def remove_duplicates(data):
+    unique_set = set()
+
+    unique_list = []
+    
+    for sublist in data:
+        tuple_sublist = tuple(sublist)
+        if tuple_sublist not in unique_set:
+            unique_set.add(tuple_sublist)
+            unique_list.append(sublist)
+    return unique_list
+
+def combine_pairs(df):
+    cols = [c for c in df.columns if 'L' in c]
+    List = []
+    for i in cols:
+        out = []
+        for j in cols:
+            if i[1] != j[1]:
+                out.append(sorted([i, j]))
+        if out not in List:
+            List.append(out[0])
+            
+    return remove_duplicates(remove_pseudos(List))
+
 
 def main():
     import RINExplorer as rx 
@@ -60,13 +65,13 @@ def main():
     
     rinex = rx.RINEX3(path_file)
     
-    prn = 'G01'
+    prn = 'R01'
     
     df = rinex.sel(prn)
     
+    comb_list = combine_pairs(df)
     
-    
-    codes = observation_codes_pairs(df)
-    
+    df[comb_list[0]].dropna()
+        
 
 

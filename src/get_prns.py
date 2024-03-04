@@ -1,14 +1,31 @@
 import RINExplorer as rx
 
+def split_prns(item: str) -> list:
+    """Split PRNs string sequence into list"""
+    return [item[num - 3: num] for num in 
+            range(3, len(item[2:]) + 3, 3)]
 
-def get_prns_section(
-        prns_list, 
-        num_sats, 
-        i
-        ):
+
+def check_prns_in_string(dummy_string):
+    
+    gnss_constellations = {
+        "G", "R", "E", "S", "C"
+        }
+    
+    if any(constellation in dummy_string for 
+           constellation in gnss_constellations):
+            
+        return True
+    else:
+        return False
+    
+
+
+def get_prns_section(prns_list, num_sats, i):
+
     num = int(num_sats)
     
-    if (num > 24) and (num < 37):
+    if (num >= 24) and (num < 37):
         element = "".join(
             [prns_list[i], 
              prns_list[i + 1], 

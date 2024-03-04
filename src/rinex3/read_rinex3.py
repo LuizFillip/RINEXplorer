@@ -46,7 +46,7 @@ class RINEX3(object):
         return df
 
     
-    def sel(self, prn, sel = 1, drop_ssi = True):           
+    def sel(self, prn, num = 0, drop_ssi = True):           
         
         
         df = self.obs(
@@ -62,22 +62,26 @@ class RINEX3(object):
                         
         df = df.drop(columns = columns_with_all_nan)
         
+        comb_list = rx.combine_pairs(df)
+    
+    
+        return df[comb_list[num]].dropna()
 
-        cols = rx.filter_columns(df, sel = sel)
+        # cols = rx.filter_columns(df, sel = sel)
         
-        lli = self.obs(
-            values = 'lli', 
-            const = prn[0], 
-            drop_ssi = drop_ssi
-            )
+        # lli = self.obs(
+        #     values = 'lli', 
+        #     const = prn[0], 
+        #     drop_ssi = drop_ssi
+        #     )
         
-        lli_cols = [f'{c}' for c in cols if 'L' in c]
+        # lli_cols = [f'{c}' for c in cols if 'L' in c]
         
-        lli = lli.loc[lli["prn"] == prn, lli_cols]
+        # lli = lli.loc[lli["prn"] == prn, lli_cols]
         
-        lli.columns = [f'{c}lli' for c in lli.columns]
+        # lli.columns = [f'{c}lli' for c in lli.columns]
         
-        return pd.concat([df.loc[:, cols], lli], axis = 1).dropna()
+        # return pd.concat([df.loc[:, cols], lli], axis = 1).dropna()
         
 
  

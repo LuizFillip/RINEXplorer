@@ -98,7 +98,10 @@ class RINEX21(object):
 
 
 
+# infile = 'database/GNSS/rinex/areg0170.13o'
 
 
 
+# ds = RINEX21(infile)
 
+# ds

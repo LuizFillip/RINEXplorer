@@ -1,18 +1,6 @@
-import RINExplorer as gs
+import RINExplorer as rx
 
-def _check_prns_in_string(dummy_string):
-    
-    gnss_constellations = {
-        "G", "R", "E", "S", "C"
-        }
-    
-    if any(constellation in dummy_string for 
-           constellation in gnss_constellations):
-            
-        return True
-    else:
-        return False
-    
+
 def fisrt_dn(ds):
 
     d = ds['time'][:3]
@@ -50,14 +38,14 @@ def get_epochs(data, ds):
         
         fla = time_epoch[:10].strip()
                 
-        if _check_prns_in_string(prns_epoch):
+        if rx.check_prns_in_string(prns_epoch):
             
             prns_list.append(prns_epoch.strip())
             
             if fisrt_dn(ds) == fla:
                 
                 time_list.append(
-                    gs.get_datetime(time_epoch)
+                    rx.get_datetime(time_epoch)
                     )
                     
         else:
@@ -67,7 +55,7 @@ def get_epochs(data, ds):
                 data_list.append(elem)
             
         
-    prns_list = gs.join_prns_epochs(prns_list)
+    prns_list = rx.join_prns_epochs(prns_list)
     
     if len(time_list) != len(prns_list):
         raise ValueError(
@@ -84,7 +72,7 @@ class DataSections(object):
     
     def __init__(self, infile):
         
-        obs = gs.HEADER(infile)
+        obs = rx.HEADER(infile)
         
         self.number_of_obs = int(obs.obs[0])
         self.observables = obs.obs[1:]

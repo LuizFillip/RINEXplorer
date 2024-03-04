@@ -9,4 +9,4 @@ from .header_rinex import HEADER
 from .get_data_sections import DataSections
 from .rinex_utils import *
 from .get_observables import  get_observables_rinex21
-from .get_prns import join_prns_epochs
+from .get_prns import *

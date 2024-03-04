@@ -158,14 +158,7 @@ time_prns, data, indexes = prn_time_and_data(lines)
 # time_list, prns_list = extend_lists(time_prns)
 
 
-if  num_of_obs < 6:
-    length = 1
-elif (num_of_obs >= 6) and (num_of_obs < 11):
-    length = 2
-elif (num_of_obs >= 11) and (num_of_obs <= 16):
-    length = 3
-elif num_of_obs > 16:
-    length = 5
+
     
 
 # out1 = []
@@ -222,9 +215,24 @@ elif num_of_obs > 16:
 
 #     #
 
-
+if  num_of_obs < 6:
+    length = 1
+elif (num_of_obs >= 6) and (num_of_obs < 11):
+    length = 2
+elif (num_of_obs >= 11) and (num_of_obs <= 16):
+    length = 3
+elif num_of_obs > 16:
+    length = 5
+    
+    
 prn = list(time_prns.values())
-i = 0
-n_sats = len(prn[i]) * 5
 
-data[n_sats: ]
+start = 0
+out = []
+for p in prn:
+    n_sats = len(p) * length
+    slice_data = data[start:start+n_sats]
+    out.append(''.join(slice_data))
+    start += n_sats
+
+out
