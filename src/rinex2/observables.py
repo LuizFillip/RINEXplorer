@@ -85,8 +85,7 @@ def prn_time_and_data(lines):
 def get_observables(data, num_of_obs):
     
     total_sats = len(data)
-    obs = np.empty((total_sats, num_of_obs), 
-                   dtype = np.float64) * np.NaN
+    obs = np.empty((total_sats, num_of_obs), dtype = np.float64) * np.NaN
     lli = np.zeros((total_sats, num_of_obs), dtype = np.uint8)
     ssi = np.zeros((total_sats, num_of_obs), dtype = np.uint8)
 
@@ -104,7 +103,7 @@ def test_lengths(prns_list, time_list, data):
     assert len(prns_list) == len(time_list) == len(data)
     
 def test_length_element(data):
-    return list(set([len(ln) for ln in data]))
+    assert list(set([len(ln) for ln in data]))[0] == 80
 
 
 def extend_lists(time_prns):
@@ -146,8 +145,8 @@ def get_data_rows(data, time_prns, num_of_obs):
         n_sats = len(p) * length
         slice_data = data[start: start + n_sats]
         
-        for i in range(0, len(slice_data), length):
-            item = ''.join(slice_data[i: i + length])
+        for index in range(0, len(slice_data), length):
+            item = ''.join(slice_data[index: index + length])
             out.append(item)
         
         start += n_sats
@@ -168,4 +167,6 @@ class obs2:
         data = get_data_rows(data, time_prns, num_of_obs)
         
         self.obs, self.lli, self.ssi = get_observables(data, num_of_obs)            
+        
+        test_lengths(self.prns_list, self.time_list, data)
 
