@@ -2,7 +2,7 @@ import RINExplorer as rx
 import pandas as pd 
 import numpy as np
 
-class RINEX3(object):
+class rinex3(object):
     
     
     def __init__(self, path_file):
