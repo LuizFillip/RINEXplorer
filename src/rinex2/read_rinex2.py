@@ -61,6 +61,7 @@ class rinex2(object):
         
         return df[cols].dropna()
     
-# infile = 'database/GNSS/areg0290.13o'
+# infile = 'database/GNSS/rinex/areg1680.16o'
 
 # rinex2(infile).sel('G01')
+

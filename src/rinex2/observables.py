@@ -1,5 +1,6 @@
 import RINExplorer as rx 
 import numpy as np 
+import pandas as pd 
 
 def start_data(lines):
     out = []
@@ -9,6 +10,30 @@ def start_data(lines):
         elif 'END OF HEADER' in ln:
             out.append(i)
     return tuple(out)
+
+
+
+def check_if_missing_values(time_prns, freq = '30s'):
+    
+    if freq == '30s':
+        periods = 2880
+        
+    
+    times = list(time_prns.keys()) 
+    
+    expect_times  = pd.date_range(
+        times[0], 
+        freq = freq, 
+        periods = periods
+        )
+    
+    rest = sorted(list(set(times) ^ set(expect_times)))
+
+    if len(rest) != 0:
+        return expect_times
+    
+    else:
+        return times
             
 def join_of_prns(LIST, index):
     
@@ -58,26 +83,27 @@ def prn_time_and_data(lines):
     
     for i, ln in enumerate(lines):
         year_in = ln[:3].strip()
-        # 
-            
-        if rx.check_prns_in_string(ln):
-            if year_out == year_in:
-                index = i
-                time = rx.get_datetime(ln[:29])
-                
-                prns_out, u = join_of_prns(lines, i)
-                time_prn[time] = prns_out
-                
+        
+        if 'COMMENT' in ln:
+            pass
         else:
-           
-            obs_line = ln.replace('\n', '')
-            indexes[time] = (index, u)
-            
-            if len(obs_line) != 80:
-                obs_line += ' ' * abs(80 - len(obs_line))
-            
-            data_list.append(obs_line)
-            
+            if rx.check_prns_in_string(ln):
+                if year_out == year_in:
+                    index = i
+                    time = rx.get_datetime(ln[:29])
+                    
+                    prns_out, u = join_of_prns(lines, i)
+                    time_prn[time] = prns_out
+                    
+            else:
+                obs_line = ln.replace('\n', '')
+                indexes[time] = (index, u)
+                
+                if len(obs_line) != 80:
+                    obs_line += ' ' * abs(80 - len(obs_line))
+                
+                data_list.append(obs_line)
+        
             
     return time_prn, data_list, indexes
 
@@ -92,9 +118,12 @@ def get_observables(data, num_of_obs):
     for i, obs_line in enumerate(data):
         for j in range(num_of_obs):
             obs_record = obs_line[16 * j: 16 * (j + 1)]
-            obs[i, j] = rx.floatornan(obs_record[0:14])
-            lli[i, j] = rx.digitorzero(obs_record[14:15].strip())
-            ssi[i, j] = rx.digitorzero(obs_record[15:16].strip())
+            try:
+                obs[i, j] = rx.floatornan(obs_record[0:14])
+                lli[i, j] = rx.digitorzero(obs_record[14:15].strip())
+                ssi[i, j] = rx.digitorzero(obs_record[15:16].strip())
+            except:
+                continue
             
     return obs, lli, ssi
 
