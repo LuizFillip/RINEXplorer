@@ -1,4 +1,4 @@
-# RINexplorer
+# RINExplorer
 
 This repository contains Python scripts and tools for reading RINEX (Receiver Independent Exchange) and SP3 (Standard Precision Positioning) files to extract GNSS (Global Navigation Satellite System) observables such as pseudorange, carrier phase, and more.
 
