@@ -2,10 +2,6 @@ import RINExplorer as rx
 import pandas as pd 
 import numpy as np
 
-infile = 'database/GNSS/rinex/areg0170.13o'
-
-    # infile = 'database/GNSS/rinex/iqqe0010.13o'
-
 
 
 
@@ -18,7 +14,9 @@ class rinex2(object):
         self.attrs = rx.headerRINEX2(infile)
         
         self.ob = rx.obs2(self.attrs.lines, self.attrs.num_of_obs)
-    
+        
+        self.header = self.attrs.attrs
+        
     @property
     def prns(self):
         return np.unique(self.ob.prns_list)
@@ -55,13 +53,25 @@ class rinex2(object):
         
         df = df.loc[df["prn"] == prn]
         
-        if (prn[0] == 'G') or (prn[0] == 'R'):
-            cols = ['L1', 'L2']
-
+        df = df.loc[:, df.count() != 0].iloc[:, :4]
         
-        return df[cols].dropna()
+        lli_df = self.dataset(values = 'lli')
+        
+        lli_df = lli_df.loc[lli_df["prn"] == prn, df.columns]
+        lli_df.columns = [f'{c}lli' for c in lli_df.columns]
+        
+        
+        return pd.concat([df, lli_df.iloc[:, :2]], axis = 1).dropna()
+            
+def main():
+    # infile = 'database/GNSS/rinex/areg1680.16o'
+    infile = 'database/GNSS/rinex/areg0170.13o'
+    infile = 'database/GNSS/rinex/amco0011.23o'
     
-# infile = 'database/GNSS/rinex/areg1680.16o'
-
-# rinex2(infile).sel('G01')
-
+    df= rinex2(infile)
+    
+    
+    df.dataset('G01')
+    
+    
+    
