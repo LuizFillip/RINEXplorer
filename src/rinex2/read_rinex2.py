@@ -3,6 +3,28 @@ import pandas as pd
 import numpy as np
 
 
+def combine_better_obs(df):
+    
+    counts = df.count()
+
+    C = counts[counts.index.str.startswith('C')]
+    P = counts[counts.index.str.startswith('P')]
+    L = counts[counts.index.str.startswith('L')]
+    
+    # escolhe grupo primário C, senão P
+    CP = C if not C.empty else P
+    
+    # top-2 de cada grupo
+    cp_top2 = CP.nlargest(2)
+    l_top2  = L.nlargest(2)
+    
+    result = ['prn']
+    cp_pair = cp_top2.index.tolist()
+    l_pair  = l_top2.index.tolist()
+    
+    result.extend(cp_pair)
+    result.extend(l_pair)
+    return result
 
 
 
@@ -20,7 +42,8 @@ class rinex2(object):
     @property
     def prns(self):
         return np.unique(self.ob.prns_list)
-        
+    
+
     def dataset(self, values = 'obs', drop_ssi = True):
         
         if values == 'obs':
@@ -46,32 +69,59 @@ class rinex2(object):
         
         return df
     
-    def sel(self, prn, values = 'obs'):
+    def set_prn_obs(self, prn):
         
-        df = self.dataset(values = values)
+        df = self.dataset(values = 'obs')
         
+        df = df.loc[df.prn == prn]
+    
+        df = df.dropna(axis = 1, how = 'all')
+
+        if len(df.columns) == 5:
+            return df
+        else:
+            return df[combine_better_obs(df)]
+
+
+    def set_prn_lli(self, prn, cols):
+        lli = self.dataset(values = 'lli')
         
-        df = df.loc[df["prn"] == prn]
+        lli = lli.loc[lli["prn"] == prn, cols]
         
-        df = df.loc[:, df.count() != 0].iloc[:, :4]
+        lli.columns = [f'{c}lli' for c in lli.columns]
         
-        lli_df = self.dataset(values = 'lli')
+        lli = lli[[col for col in lli.columns if 'L' in col]]
+
+        return lli 
+
+    
+    def sel(self, prn):
         
-        lli_df = lli_df.loc[lli_df["prn"] == prn, df.columns]
-        lli_df.columns = [f'{c}lli' for c in lli_df.columns]
-        
-        
-        return pd.concat([df, lli_df.iloc[:, :2]], axis = 1).dropna()
+        df = self.set_prn_obs(prn)
+
+        lli = self.set_prn_lli(prn, df.columns)
+
+        return pd.concat([df, lli], axis = 1).dropna()
             
-def main():
-    # infile = 'database/GNSS/rinex/areg1680.16o'
-    infile = 'database/GNSS/rinex/areg0170.13o'
-    infile = 'database/GNSS/rinex/amco0011.23o'
+# def main():
     
-    df= rinex2(infile)
+# import GNSS as gs 
+# import datetime as dt 
+
+# station  = 'salu'
+# dn = dt.date(2025, 1, 1)
+# doy = gs.doy_from_date(dn)
+
+# path = gs.paths(dn.year, doy).fn_rinex(station)
     
-    
-    df.dataset('G01')
-    
-    
-    
+# ob = rinex2(path)
+
+
+
+# prn = 'R06'
+
+
+# df = ob.sel(prn)
+
+
+# df 

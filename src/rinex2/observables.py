@@ -18,7 +18,6 @@ def check_if_missing_values(time_prns, freq = '30s'):
     if freq == '30s':
         periods = 2880
         
-    
     times = list(time_prns.keys()) 
     
     expect_times  = pd.date_range(

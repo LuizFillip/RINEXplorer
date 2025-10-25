@@ -70,3 +70,5 @@ class headerRINEX2:
         self.attrs = geral_infos
         self.lines = lines
         
+        return None 
+        
