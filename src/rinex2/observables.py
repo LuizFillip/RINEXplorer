@@ -1,116 +1,29 @@
 import RINExplorer as rx 
 import numpy as np 
-import pandas as pd 
 
-def start_data(lines):
-    out = []
-    for i, ln in enumerate(lines):
-        if 'TIME OF FIRST OBS'  in ln:
-            out.append(ln[:8].strip())
-        elif 'END OF HEADER' in ln:
-            out.append(i)
-    return tuple(out)
+def combine_better_obs(df):
+    counts = df.count()
+    C = counts[counts.index.str.startswith("C")]
+    P = counts[counts.index.str.startswith("P")]
+    L = counts[counts.index.str.startswith("L")]
 
+    CP = C if not C.empty else P
+    cp_pair = CP.nlargest(2).index.tolist()
+    l_pair  = L.nlargest(2).index.tolist()
 
+    result = []
+    if "prn" in df.columns:
+        result.append("prn")
+    result.extend(cp_pair)
+    result.extend(l_pair)
+    return result
 
-def check_if_missing_values(time_prns, freq = '30s'):
-    
-    if freq == '30s':
-        periods = 2880
-        
-    times = list(time_prns.keys()) 
-    
-    expect_times  = pd.date_range(
-        times[0], 
-        freq = freq, 
-        periods = periods
-        )
-    
-    rest = sorted(list(set(times) ^ set(expect_times)))
-
-    if len(rest) != 0:
-        return expect_times
-    
-    else:
-        return times
-            
-def join_of_prns(LIST, index):
-    
-    num = int(LIST[index][29:][:3].strip())
-    
-    if num == 0:
-        print(LIST)
-    
-    def slice_in(i): return LIST[i][29:].strip()
-    
-    if num < 13:
-        element = slice_in(index)
-        u = 1
-        
-    elif (num > 24) and (num < 37):
-        element = ''.join([slice_in(index + i) for i in range(3)])
-        u = 3
-    elif num >= 37:
-        element = ''.join([slice_in(index + i) for i in range(4)])
-        u = 4
-        
-    else:
-        element = ''.join([slice_in(index + i) for i in range(2)])
-        u = 2
-    
-    if num < 10:
-        i = 1
-    else:
-        i = 2
-        
-    list_prns = rx.split_prns(element[i:])
-    
-    if len(list_prns) != int(num):
-        raise ValueError('Number of prns doenst match')
-        
-    return list_prns, u
-        
-def prn_time_and_data(lines):
-    
-    dn, i = start_data(lines)
-    year_out = dn[-2:]
-    lines = lines[i + 1:]
-    time_prn = {}
-    data_list = []
-    indexes = {}
-    
-    
-    for i, ln in enumerate(lines):
-        year_in = ln[:3].strip()
-        
-        if 'COMMENT' in ln:
-            pass
-        else:
-            if rx.check_prns_in_string(ln):
-                if year_out == year_in:
-                    index = i
-                    time = rx.get_datetime(ln[:29])
-                    
-                    prns_out, u = join_of_prns(lines, i)
-                    time_prn[time] = prns_out
-                    
-            else:
-                obs_line = ln.replace('\n', '')
-                indexes[time] = (index, u)
-                
-                if len(obs_line) != 80:
-                    obs_line += ' ' * abs(80 - len(obs_line))
-                
-                data_list.append(obs_line)
-        
-            
-    return time_prn, data_list, indexes
 
 
 def get_observables(data, num_of_obs):
     
     total_sats = len(data)
-    obs = np.empty((total_sats, num_of_obs), dtype = np.float64) * np.NaN
+    obs = np.empty((total_sats, num_of_obs), dtype = np.float64) * np.nan
     lli = np.zeros((total_sats, num_of_obs), dtype = np.uint8)
     ssi = np.zeros((total_sats, num_of_obs), dtype = np.uint8)
 
@@ -184,17 +97,9 @@ def get_data_rows(data, time_prns, num_of_obs):
 
 
 
-class obs2:
-    
-    def __init__(self, lines, num_of_obs):
-                
-        time_prns, data, indexes = prn_time_and_data(lines)
-        
-        self.time_list, self.prns_list = extend_lists(time_prns)
-        
-        data = get_data_rows(data, time_prns, num_of_obs)
-        
-        self.obs, self.lli, self.ssi = get_observables(data, num_of_obs)            
-        
-        test_lengths(self.prns_list, self.time_list, data)
+
+
+
+
+
 

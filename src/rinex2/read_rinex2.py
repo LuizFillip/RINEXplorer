@@ -3,125 +3,148 @@ import pandas as pd
 import numpy as np
 
 
-def combine_better_obs(df):
-    
-    counts = df.count()
+class Rinex2:
+    """
+    Wrapper unificado (novo formato):
+      - lê header (rx.HeaderRINEX2)
+      - parseia epochs+PRNs e linhas brutas (rx.prn_time_and_data)
+      - monta linhas por satélite (rx.get_data_rows)
+      - extrai obs/lli/ssi (rx.get_observables)
+      - entrega datasets e seleções por PRN
+    """
 
-    C = counts[counts.index.str.startswith('C')]
-    P = counts[counts.index.str.startswith('P')]
-    L = counts[counts.index.str.startswith('L')]
-    
-    # escolhe grupo primário C, senão P
-    CP = C if not C.empty else P
-    
-    # top-2 de cada grupo
-    cp_top2 = CP.nlargest(2)
-    l_top2  = L.nlargest(2)
-    
-    result = ['prn']
-    cp_pair = cp_top2.index.tolist()
-    l_pair  = l_top2.index.tolist()
-    
-    result.extend(cp_pair)
-    result.extend(l_pair)
-    return result
+    def __init__(self, infile, drop_ssi_default=True):
+        self.infile = infile
+        self.drop_ssi_default = drop_ssi_default
 
+        # Header
+        self._header = rx.HeaderRINEX2(infile)
+        self.header = self._header.attrs
+        self.obs_names = list(self._header.obs_names)
+        self.num_of_obs = int(self._header.num_of_obs)
 
+        # Dados
+        time_prns, raw_data = rx.prn_time_and_data(infile)
 
-class rinex2(object):
-    
-    
-    def __init__(self, infile):
-        
-        self.attrs = rx.headerRINEX2(infile)
-        
-        self.ob = rx.obs2(self.attrs.lines, self.attrs.num_of_obs)
-        
-        self.header = self.attrs.attrs
-        
+        self.time_list, self.prns_list = rx.extend_lists(time_prns)
+
+        data_rows = rx.get_data_rows(raw_data, time_prns, self.num_of_obs)
+
+        self.obs, self.lli, self.ssi = rx.get_observables(data_rows, self.num_of_obs)
+
+        # Cache para dfs
+        self._cache = {}
+
+        # Checagem básica de consistência
+        n = len(self.prns_list)
+        if not (len(self.time_list) == n == self.obs.shape[0] == self.lli.shape[0] == self.ssi.shape[0]):
+            raise ValueError(
+                "Inconsistência de tamanhos: "
+                f"time={len(self.time_list)}, prn={len(self.prns_list)}, "
+                f"obs={self.obs.shape}, lli={self.lli.shape}, ssi={self.ssi.shape}"
+            )
+
     @property
     def prns(self):
-        return np.unique(self.ob.prns_list)
-    
+        return np.unique(np.asarray(self.prns_list))
 
-    def dataset(self, values = 'obs', drop_ssi = True):
-        
-        if values == 'obs':
-            data = self.ob.obs
-        elif values == 'lli':
-            data = self.ob.lli
-        else:
-            data = self.ob.ssi 
-            
-            
-        df =  pd.DataFrame(
-                data, 
-                index = self.ob.time_list,
-                columns = self.attrs.obs_names
-            )
-        
-        df['prn'] = self.ob.prns_list
-        
+    def _make_df(self, values="obs", drop_ssi=None, multiindex=True):
+        """
+        Cria DataFrame base:
+          - index=time (ou MultiIndex time+prn se multiindex=True)
+          - colunas = observáveis do header
+        """
+        if values not in ("obs", "lli", "ssi"):
+            raise ValueError("values deve ser 'obs', 'lli' ou 'ssi'.")
+
+        if drop_ssi is None:
+            drop_ssi = self.drop_ssi_default
+
+        key = (values, drop_ssi, multiindex)
+        if key in self._cache:
+            return self._cache[key].copy()
+
+        data = getattr(self, values)
+
+        df = pd.DataFrame(
+            data,
+            index=pd.to_datetime(self.time_list),
+            columns=self.obs_names
+        )
+        df["prn"] = pd.Index(self.prns_list, dtype="string")
+
         if drop_ssi:
-            columns = [col for col in df.columns 
-                       if ('S' in col) or ('D' in col)]
-            df = df.drop(columns = columns)
-        
-        return df
-    
-    def set_prn_obs(self, prn):
-        
-        df = self.dataset(values = 'obs')
-        
-        df = df.loc[df.prn == prn]
-    
-        df = df.dropna(axis = 1, how = 'all')
+            # remove S* e D*
+            drop_cols = [c for c in df.columns
+                         if isinstance(c, str) and (c.startswith("S") or c.startswith("D"))]
+            df = df.drop(columns=drop_cols, errors="ignore")
 
-        if len(df.columns) == 5:
+        if multiindex:
+            df = df.set_index("prn", append=True)
+            df.index.names = ["time", "prn"]
+
+        self._cache[key] = df
+        return df.copy()
+
+    def dataset(self, values="obs", drop_ssi=None):
+        """
+        Retorna DataFrame com index=time e coluna 'prn' (compatível com seu estilo antigo).
+        """
+        return self._make_df(values=values, drop_ssi=drop_ssi, multiindex=False)
+
+    def dataset_mi(self, values="obs", drop_ssi=None):
+        """
+        Retorna DataFrame com MultiIndex (time, prn).
+        """
+        return self._make_df(values=values, drop_ssi=drop_ssi, multiindex=True)
+
+    def set_prn_obs(self, prn, drop_ssi=None):
+        """
+        Observações de um PRN, reduzindo automaticamente para:
+          - 2 pseudorange (C* ou P*)
+          - 2 fase (L*)
+        """
+        df = self.dataset(values="obs", drop_ssi=drop_ssi)
+        df = df.loc[df["prn"] == prn].drop(columns=["prn"])
+        df = df.dropna(axis=1, how="all")
+
+        if df.shape[1] == 4:
             return df
-        else:
-            return df[combine_better_obs(df)]
 
+        cols = [c for c in rx.combine_better_obs(df.assign(prn=prn)) if c != "prn"]
+        cols = [c for c in cols if c in df.columns]
+        return df[cols]
 
-    def set_prn_lli(self, prn, cols):
-        lli = self.dataset(values = 'lli')
-        
+    def set_prn_lli(self, prn, cols, drop_ssi=None):
+        """
+        LLI para as colunas selecionadas (mantém só L*).
+        """
+        lli = self.dataset(values="lli", drop_ssi=drop_ssi)
         lli = lli.loc[lli["prn"] == prn, cols]
-        
-        lli.columns = [f'{c}lli' for c in lli.columns]
-        
-        lli = lli[[col for col in lli.columns if 'L' in col]]
 
-        return lli 
+        lli = lli[[c for c in lli.columns if isinstance(c, str) and c.startswith("L")]]
+        lli.columns = [f"{c}_lli" for c in lli.columns]
+        return lli
 
+    def sel(self, prn, drop_ssi=None, dropna=True):
+        """
+        Dataset final para um PRN:
+          - obs selecionadas automaticamente
+          - + LLI correspondente
+        """
+        obs = self.set_prn_obs(prn, drop_ssi=drop_ssi)
+        lli = self.set_prn_lli(prn, obs.columns.tolist(), drop_ssi=drop_ssi)
+
+        out = pd.concat([obs, lli], axis=1)
+        return out.dropna() if dropna else out
+
+
+def test_main():
+    infile = 'F:\\database\\GNSS\\rinex\\2010\\001\\alar0011.10o' 
+    rnx = Rinex2(infile)
     
-    def sel(self, prn):
-        
-        df = self.set_prn_obs(prn)
-
-        lli = self.set_prn_lli(prn, df.columns)
-
-        return pd.concat([df, lli], axis = 1).dropna()
-            
-# def main():
+    print(rnx.prns)
     
-# import GNSS as gs 
-# import datetime as dt 
-
-# station  = 'salu'
-# dn = dt.date(2025, 1, 1)
-# doy = gs.doy_from_date(dn)
-
-# path = gs.paths(dn.year, doy).fn_rinex(station)
-    
-# ob = rinex2(path)
-
-
-
-# prn = 'R06'
-
-
-# df = ob.sel(prn)
-
-
-# df 
+    df = rnx.sel("G26")
+    df_all = rnx.dataset_mi(values="obs")
+    df 
