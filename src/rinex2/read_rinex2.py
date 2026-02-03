@@ -37,7 +37,8 @@ class Rinex2:
 
         # Checagem básica de consistência
         n = len(self.prns_list)
-        if not (len(self.time_list) == n == self.obs.shape[0] == self.lli.shape[0] == self.ssi.shape[0]):
+        if not (len(self.time_list) == n == self.obs.shape[0] == 
+                self.lli.shape[0] == self.ssi.shape[0]):
             raise ValueError(
                 "Inconsistência de tamanhos: "
                 f"time={len(self.time_list)}, prn={len(self.prns_list)}, "

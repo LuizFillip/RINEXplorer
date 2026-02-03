@@ -34,9 +34,9 @@ def _parse_time_of_obs(info60):
     t = dt.datetime(year, month, day, hour, minute, sec, microsecond=micro)
 
     # time system (se existir)
-    time_system = parts[6] if len(parts) >= 7 else None
+    # time_system = parts[6] if len(parts) >= 7 else None
 
-    return {"datetime": t, "time_system": time_system}
+    return t #{"datetime": } # "time_system": time_system}
 
 def _extend_obs_types(obs_lines_60):
     """
@@ -111,11 +111,19 @@ def parse_first_epoch_rinex2(filepath, encoding="utf-8"):
 
     return None
 
+# {
+#     "datetime": t_data,
+#     "time_system": attrs.get("time_first_obs", {}).get("time_system")
+#     if isinstance(attrs.get("time_first_obs"), dict) else None,
+#     "filled_from_data": True,
+# }
 def auto_fix_time_of_first_obs(attrs, infile, encoding="utf-8", tolerance_seconds=0.0):
     """
     Compara TIME OF FIRST OBS do header com a primeira época real dos dados.
     Se diferente (maior que tolerância), corrige attrs e registra metadados.
     """
+    fmt = '%Y%m%d%H%M%S'
+    
     t_data = parse_first_epoch_rinex2(infile, encoding=encoding)
     if t_data is None:
         attrs["time_first_obs_check"] = {"status": "no_data_epoch_found"}
@@ -127,19 +135,20 @@ def auto_fix_time_of_first_obs(attrs, infile, encoding="utf-8", tolerance_second
 
     # Se não havia no header, preenche
     if t_header is None:
-        attrs["time_first_obs"] = {
-            "datetime": t_data,
-            "time_system": attrs.get("time_first_obs", {}).get("time_system") if isinstance(attrs.get("time_first_obs"), dict) else None,
-            "filled_from_data": True,
-        }
+        attrs["time_first_obs"] = t_data.strftime(fmt) #11
         attrs["time_first_obs_check"] = {"status": "filled", "delta_seconds": None}
         return attrs
 
     # Se havia, compara com tolerância
     delta = abs((t_data - t_header).total_seconds())
+    
+    
     if delta > float(tolerance_seconds):
-        attrs["time_first_obs_original"] = attrs["time_first_obs"]
-        attrs["time_first_obs"] = {**attrs["time_first_obs"], "datetime": t_data, "fixed_from_data": True}
+        attrs["time_first_obs_original"] = attrs["time_first_obs"].strftime(fmt)
+        
+        attrs["time_first_obs"] = {**attrs["time_first_obs"].strftime(fmt),
+                                   "datetime": t_data.strftime(fmt), "fixed_from_data": True}
+        
         attrs["time_first_obs_check"] = {"status": "fixed", "delta_seconds": delta}
     else:
         attrs["time_first_obs_check"] = {"status": "ok", "delta_seconds": delta}
@@ -182,86 +191,90 @@ class HeaderRINEX2:
                 if label == "RINEX VERSION / TYPE":
                     # ex: "2.11           OBSERVATION DATA    G (GPS) ..."
                     self.attrs["version"] = info[:9].strip()
-                    self.attrs["file_type"] = info[20:21].strip() or None
-                    self.attrs["sat_system_hint"] = info[40:60].strip() or None
+                    # self.attrs["file_type"] = info[20:21].strip() or None
+                    # self.attrs["sat_system_hint"] = info[40:60].strip() or None
 
-                elif label == "PGM / RUN BY / DATE":
-                    self.attrs["program"] = info[:20].strip() or None
-                    self.attrs["run_by"] = info[20:40].strip() or None
-                    self.attrs["date"] = info[40:60].strip() or None
+                # elif label == "PGM / RUN BY / DATE":
+                #     self.attrs["program"] = info[:20].strip() or None
+                #     self.attrs["run_by"] = info[20:40].strip() or None
+                #     self.attrs["date"] = info[40:60].strip() or None
 
                 elif label == "MARKER NAME":
                     self.attrs["marker_name"] = info.strip() or None
 
-                elif label == "MARKER NUMBER":
-                    self.attrs["marker_number"] = info.strip() or None
+                # elif label == "MARKER NUMBER":
+                #     self.attrs["marker_number"] = info.strip() or None
 
                 elif label == "MARKER TYPE":
                     self.attrs["marker_type"] = info.strip() or None
 
-                elif label == "OBSERVER / AGENCY":
-                    self.attrs["observer"] = info[:20].strip() or None
-                    self.attrs["agency"] = info[20:60].strip() or None
+                # elif label == "OBSERVER / AGENCY":
+                #     self.attrs["observer"] = info[:20].strip() or None
+                #     self.attrs["agency"] = info[20:60].strip() or None
 
                 elif label == "REC # / TYPE / VERS":
-                    self.attrs["receiver_number"] = info[:20].strip() or None
+                    # self.attrs["receiver_number"] = info[:20].strip() or None
                     self.attrs["receiver_type"] = info[20:40].strip() or None
-                    self.attrs["receiver_version"] = info[40:60].strip() or None
+                    # self.attrs["receiver_version"] = info[40:60].strip() or None
 
-                elif label == "ANT # / TYPE":
-                    self.attrs["antenna_number"] = info[:20].strip() or None
-                    self.attrs["antenna_type"] = info[20:40].strip() or None
+                # elif label == "ANT # / TYPE":
+                #     # self.attrs["antenna_number"] = info[:20].strip() or None
+                #     self.attrs["antenna_type"] = info[20:40].strip() or None
 
                 elif label == "APPROX POSITION XYZ":
                     parts = info.split()
                     if len(parts) >= 3:
-                        self.attrs["position_xyz"] = [float(parts[0]), float(parts[1]), float(parts[2])]
+                        self.attrs["position"] = [
+                            float(parts[0]), float(parts[1]), float(parts[2])]
                     else:
-                        self.attrs["position_xyz"] = parts
+                        self.attrs["position"] = parts
 
-                elif label == "ANTENNA: DELTA H/E/N":
-                    parts = info.split()
-                    # ordem RINEX: H, E, N
-                    if len(parts) >= 3:
-                        self.attrs["antenna_delta_hen"] = [float(parts[0]), float(parts[1]), float(parts[2])]
-                    else:
-                        self.attrs["antenna_delta_hen"] = parts
+                # elif label == "ANTENNA: DELTA H/E/N":
+                #     parts = info.split()
+                #     # ordem RINEX: H, E, N
+                #     if len(parts) >= 3:
+                #         self.attrs["antenna_delta_hen"] = [
+                #             float(parts[0]), float(parts[1]), float(parts[2])]
+                #     else:
+                #         self.attrs["antenna_delta_hen"] = parts
 
-                elif label == "ANTENNA: DELTA X/Y/Z":
-                    parts = info.split()
-                    if len(parts) >= 3:
-                        self.attrs["antenna_delta_xyz"] = [float(parts[0]), float(parts[1]), float(parts[2])]
-                    else:
-                        self.attrs["antenna_delta_xyz"] = parts
+                # elif label == "ANTENNA: DELTA X/Y/Z":
+                #     parts = info.split()
+                #     if len(parts) >= 3:
+                #         self.attrs["antenna_delta_xyz"] = [float(parts[0]), float(parts[1]), float(parts[2])]
+                #     else:
+                #         self.attrs["antenna_delta_xyz"] = parts
 
-                elif label == "WAVELENGTH FACT L1/2":
-                    parts = info.split()
-                    # pode ter 2 ints + lista de PRNs
-                    self.attrs["wavelength_fact_l1l2_raw"] = parts
+                # elif label == "WAVELENGTH FACT L1/2":
+                #     parts = info.split()
+                #     # pode ter 2 ints + lista de PRNs
+                #     self.attrs["wavelength_fact_l1l2_raw"] = parts
 
                 elif label == "INTERVAL":
                     # normalmente um float nos primeiros campos
                     self.attrs["interval"] = _safe_float(info.strip().split()[0]) if info.strip() else None
 
-                elif label == "LEAP SECONDS":
-                    tok = info.strip().split()
-                    self.attrs["leap_seconds"] = int(tok[0]) if tok else None
-
+                # elif label == "LEAP SECONDS":
+                #     tok = info.strip().split()
+                #     self.attrs["leap_seconds"] = int(tok[0]) if tok else None
+                
                 elif label == "TIME OF FIRST OBS":
-                    self.attrs["time_first_obs"] = _parse_time_of_obs(info)
+                    fmt = '%Y%m%d%H%M%S'
+                    self.attrs["time_first_obs"] = _parse_time_of_obs(info).strftime(fmt)
 
                 elif label == "TIME OF LAST OBS":
-                    self.attrs["time_last_obs"] = _parse_time_of_obs(info)
+                    fmt = '%Y%m%d%H%M%S'
+                    self.attrs["time_last_obs"] = _parse_time_of_obs(info).strftime(fmt)
 
                 elif label == "# / TYPES OF OBSERV":
                     obs_types_lines.append(info)
 
-                elif label == "COMMENT":
-                    self.comments.append(info.rstrip())
+                # elif label == "COMMENT":
+                #     self.comments.append(info.rstrip())
 
-                else:
-                    # guarda o que não foi tratado (útil para depurar / ampliar)
-                    self.attrs.setdefault("unparsed", []).append((label, info.rstrip()))
+                # else:
+                #     # guarda o que não foi tratado (útil para depurar / ampliar)
+                #     self.attrs.setdefault("unparsed", []).append((label, info.rstrip()))
 
         # pós-processamento: observáveis
         self.num_of_obs, self.obs_names = _parse_types_of_observ(obs_types_lines)
@@ -275,10 +288,14 @@ class HeaderRINEX2:
                encoding=encoding,
                tolerance_seconds=0.0  # pode pôr 1.0 se quiser tolerar 1s
            )
+        
+        return None 
 
 def test_HeaderRINEX2():
     infile = 'F:\\database\\GNSS\\rinex\\2010\\001\\alar0011.10o' 
     
     ob = HeaderRINEX2(infile)
     
-    ob.lines 
+    print(ob.attrs) 
+    
+# test_HeaderRINEX2()
