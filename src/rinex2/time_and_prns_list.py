@@ -38,9 +38,9 @@ def get_datetime(string_time):
 
     sec_float = float(t[5])
     second = int(sec_float)
-    micro = int(round((sec_float - second) * 1_000_000))
+    # micro = int(round((sec_float - second) * 1_000_000))
 
-    return dt.datetime(year, month, day, hour, minute, second, microsecond=micro)
+    return dt.datetime(year, month, day, hour, minute, second)
 
 def _parse_prn_field(field: str):
     """
