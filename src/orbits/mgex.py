@@ -1,107 +1,159 @@
 import datetime as dt
 import numpy as np
-import RINExplorer as gs
 import pandas as pd
+import re
 
-def check_if_prns_string(dummy_string):
-    
-    gnss_constellations = {
-        "G", "R", "E", "S", "C", 'J'
-        }
-    
-    if any(constellation in dummy_string for 
-           constellation in gnss_constellations):
-            
-        return True
-    else:
-        return False
+_PRN_RE = re.compile(r"\b[GRECSJ]\d{2}\b")
 
-def get_datetime(ln):
-    t = [int(i) for i in ln.split()[:-1]]
-    return dt.datetime(t[0], t[1], t[2], t[3], t[4])
+def check_if_prns_string(s: str) -> bool:
+    return _PRN_RE.search(s) is not None
+
+def get_datetime(ln: str) -> dt.datetime:
+    tokens = ln.split()
+    if len(tokens) < 5:
+        raise ValueError(f"Linha de epoch inválida: {ln!r}")
+
+    year, month, day, hour, minute = map(int, tokens[:5])
+
+    # se existir segundo e for numérico, usa (opcional)
+    sec = 0
+    if len(tokens) >= 6:
+        try:
+            sec_float = float(tokens[5])
+            sec = int(sec_float)  # truncando
+        except ValueError:
+            sec = 0
+
+    return dt.datetime(year, month, day, hour, minute, sec)
+
+def fixing_line(tokens):
+    """
+    tokens: lista resultante de ln.split() incluindo o primeiro campo 'Pxx'
+    Corrige casos onde valores aparecem grudados por '-' sem espaço.
+    """
+    out = []
+    fixed = False
+
+    for idx, tok in enumerate(tokens):
+        # Mantém o PRN (primeiro token) intacto
+        if idx == 0:
+            out.append(tok)
+            continue
+
+        if (not fixed) and (len(tok) > 15) and ('-' in tok):
+            # Ex: "12.34-56.78-9.0" -> ["12.34", "-56.78", "-9.0"]
+            parts = tok.split('-')
+            rebuilt = []
+            if parts[0] != '':
+                rebuilt.append(parts[0])
+            for p in parts[1:]:
+                if p != '':
+                    rebuilt.append('-' + p)
+
+            out.extend(rebuilt)
+            fixed = True
+        else:
+            out.append(tok)
+
+    return out
 
 
-def fixing_line(a):
-    b = []
-    for i, ln in enumerate(a):
-        if len(ln) > 15:
-            b.extend(['-' + i for i in ln.split('-') if i != ''])
-            index = i
-                
-    return a[:index] + b
 
 def get_epochs(string_data):
-    
-    data_list = []
+    data_rows = []
     time_list = []
     prns_list = []
-    header = []
-    
-    
-    for i, ln in enumerate(string_data.readlines()):
-        
-        if '+' == ln[0]:
-            prns_line = ln[1:].split('\n')[0][8:]
-    
-            if check_if_prns_string(prns_line):
-                for prn in gs.split_prns(prns_line):
-                    try: 
-                        float(prn.strip())
-                    except:
-                        header.append(prn)
-        
-        elif 'P' == ln[0]:
-            obs_line = ln.split()
-            prns_list.append(obs_line[0][1:])
-            
-            if len(obs_line[1:]) == 4:
-                data_list.append(obs_line[1:])
-                
-            elif len(obs_line[1:]) < 4:
-                data_list.append(fixing_line(obs_line)[1:])
-             
-            else:
-                data_list.append(obs_line[1:5])
-                
-        
-        elif '*' == ln[0]:
-            obs_time = get_datetime(ln[1:].strip())
-            time_list.extend([obs_time] * len(header))
-    
-    data_list = np.array(data_list, dtype = np.float64)
-    
-    if len(time_list) == 0:
-        raise('No data')
-        
-    return data_list, time_list, prns_list
-        
 
+    current_time = None
+    epoch_n_obs = 0
 
-def build_dataset(data, prns_list, time_list):
-    
-    tuples = list(zip(*[time_list, prns_list]))
-    
-    index = pd.MultiIndex.from_tuples(
-        tuples, 
-        names = ["time", "prn"]
+    def finalize_epoch():
+        nonlocal epoch_n_obs, current_time
+        if current_time is not None and epoch_n_obs > 0:
+            time_list.extend([current_time] * epoch_n_obs)
+        epoch_n_obs = 0
+
+    for ln in string_data:
+        if not ln:
+            continue
+        tag = ln[0]
+
+        if tag == '*':
+            finalize_epoch()
+            current_time = get_datetime(ln[1:].strip())
+
+        elif tag == 'P':
+            obs = ln.split()
+            if not obs:
+                continue
+
+            prns_list.append(obs[0][1:])
+
+            vals = obs[1:]
+            if len(vals) < 4:
+                vals = fixing_line(obs)[1:]
+
+            vals = vals[:4]
+            if len(vals) != 4:
+                # se ainda assim não deu 4, preenche com NaN (melhor que quebrar)
+                vals = (vals + [np.nan] * 4)[:4]
+
+            data_rows.append(vals)
+            epoch_n_obs += 1
+
+        elif tag == '+':
+            # opcional: se você usa o header pra algo, mantém;
+            # do jeito original ele não é necessário pra alinhar tempo.
+            pass
+
+    finalize_epoch()
+
+    if len(time_list) == 0 or len(data_rows) == 0:
+        raise ValueError("No data: nenhum epoch/observação encontrado.")
+
+    data_array = np.asarray(data_rows, dtype=np.float64)
+
+    if not (len(time_list) == len(prns_list) == len(data_array)):
+        raise ValueError(
+            f"Inconsistência no parsing: time={len(time_list)}, "
+            f"prns={len(prns_list)}, data={len(data_array)}."
         )
-      
-    columns = ["x", "y", "z", "clock"]
-    
-    return pd.DataFrame(data, 
-                        index = index, 
-                        columns = columns)
+
+    return data_array, time_list, prns_list
 
 
-def mgex(file):
-    
-    string_data = open(file, "r")
-    
-    data_list, time_list, prns_list = get_epochs(string_data)
-    
+COLUMNS = ("x", "y", "z", "clock")
+
+def build_dataset(data, prns_list, time_list, columns=COLUMNS, sort_index=True):
+    # Garantir arrays e consistência
+    data = np.asarray(data, dtype=np.float64)
+
+    if not (len(time_list) == len(prns_list) == len(data)):
+        raise ValueError(
+            f"Tamanhos inconsistentes: time={len(time_list)}, prn={len(prns_list)}, data={len(data)}"
+        )
+
+    # MultiIndex mais rápido (sem zip/list de tuples)
+    index = pd.MultiIndex.from_arrays(
+        [pd.to_datetime(time_list), pd.Index(prns_list, dtype="string")],
+        names=["time", "prn"],
+    )
+
+    df = pd.DataFrame(data, index=index, columns=columns)
+
+    # útil para slicing e performance (time primeiro)
+    if sort_index:
+        df = df.sort_index()
+
+    return df
+
+
+def mgex(filepath, encoding="utf-8"):
+    # garante fechamento do arquivo
+    with open(filepath, "r", encoding=encoding, errors="replace") as f:
+        data_list, time_list, prns_list = get_epochs(f)
+
     return build_dataset(data_list, prns_list, time_list)
-
-
 
 def test_mgex(infile):
     from tqdm import tqdm 
@@ -114,5 +166,24 @@ def test_mgex(infile):
         except:
             print(fname)
             continue
-        
 
+file = 'esa15645.sp3'
+
+prn = 'G02'
+
+def test_mgex_by_prn(file, prn):
+    df = mgex(file)
+    
+    df = df.loc[df.index.get_level_values("prn") == prn]
+    
+    df.index = df.index.get_level_values(0)
+    
+    print(df)
+    
+    string_data = open(file, "r")
+    
+    data_list, time_list, prns_list = get_epochs(string_data)
+    
+    time_list[:2]
+    
+# test_mgex_by_prn(file, prn)
