@@ -3,6 +3,19 @@ import pandas as pd
 import numpy as np
 
 
+def pad_with_nan(arr, target_rows):
+    """
+    Completa array 2D com linhas NaN até atingir target_rows.
+    """
+    n_rows, n_cols = arr.shape
+
+    if n_rows >= target_rows:
+        return arr
+
+    pad = np.full((target_rows - n_rows, n_cols), np.nan)
+    return np.vstack([arr, pad])
+
+
 class Rinex2:
     """
     Wrapper unificado (novo formato):
@@ -31,14 +44,27 @@ class Rinex2:
         data_rows = rx.get_data_rows(raw_data, time_prns, self.num_of_obs)
 
         self.obs, self.lli, self.ssi = rx.get_observables(data_rows, self.num_of_obs)
+        
+        n_expected = len(self.time_list)
+        n_obs = self.obs.shape[0]
+        
+        if n_obs != n_expected:
+            diff = n_expected - n_obs
+            if diff > 0:
+                print(f"[WARN] Ajustando {diff} linhas faltantes com NaN")
+                self.obs = pad_with_nan(self.obs, n_expected)
+                self.lli = pad_with_nan(self.lli, n_expected)
+                self.ssi = pad_with_nan(self.ssi, n_expected)
 
         # Cache para dfs
         self._cache = {}
 
         # Checagem básica de consistência
         n = len(self.prns_list)
-        if not (len(self.time_list) == n == self.obs.shape[0] == 
-                self.lli.shape[0] == self.ssi.shape[0]):
+        if not ((len(self.time_list) == n == 
+                 self.obs.shape[0] == 
+                 self.lli.shape[0] == 
+                 self.ssi.shape[0])):
             raise ValueError(
                 "Inconsistência de tamanhos: "
                 f"time={len(self.time_list)}, prn={len(self.prns_list)}, "

@@ -94,12 +94,22 @@ def get_data_rows(data, time_prns, num_of_obs):
         
     return out
 
-
-
-
-
-
-
-
-
-
+def test():
+    import GNSS as gs
+    station = 'salu'
+    
+    path = gs.paths(2010, 1, root = 'F:\\').fn_rinex(station)
+    
+    _header = rx.HeaderRINEX2(path)
+    
+    num_of_obs = int(_header.num_of_obs)
+    
+    time_prns, data = rx.prn_time_and_data(path, encoding="utf-8") 
+    
+    data = get_data_rows(data, time_prns, num_of_obs)
+    
+    obs, _, _ =  get_observables(data, num_of_obs)
+    
+    
+    
+    obs 

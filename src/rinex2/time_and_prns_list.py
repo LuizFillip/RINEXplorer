@@ -1,15 +1,6 @@
 import datetime as dt
 import re
-import RINExplorer as rx
-
-# Epoch line RINEX 2: "yy mm dd hh mm ss.sssss  flag nsats ...."
-_EPOCH_RNX2_RE = re.compile(
-    r"^\s*\d{2}\s+\d{1,2}\s+\d{1,2}\s+\d{1,2}\s+\d{1,2}\s+\d"
-)
-
-import datetime as dt
 import math
-import re
 
 # epoch line RINEX 2: "yy mm dd hh mm ss.sssss  flag nsats ..."
 _EPOCH_RNX2_RE = re.compile(r"^\s*\d{2}\s+\d{1,2}\s+\d{1,2}\s+\d{1,2}\s+\d{1,2}\s+\d")
@@ -90,13 +81,11 @@ def join_of_prns(lines, idx_epoch):
     return prns, lines_needed
 
 def prn_time_and_data(filepath, encoding="utf-8"):
-    """
-    Lê RINEX2 do disco e retorna:
-      - time_prn: dict {datetime: [PRNs]}
-      - data_lines: lista (80 chars) com linhas de observação (somente)
-    """
-    # 1) pega só bloco de dados
-    data_block = []
+    time_prn = {}
+    data_lines = []
+
+    # 1) Ler bloco de dados após END OF HEADER
+    buffered_lines = []
     with open(filepath, "r", encoding=encoding, errors="replace") as f:
         in_data = False
         for ln in f:
@@ -104,52 +93,127 @@ def prn_time_and_data(filepath, encoding="utf-8"):
                 if ln[60:80].strip() == "END OF HEADER" or "END OF HEADER" in ln:
                     in_data = True
                 continue
-            data_block.append(ln.rstrip("\n"))
+            buffered_lines.append(ln.rstrip("\n"))
 
-    time_prn = {}
-    data_lines = []
     current_time = None
+    skip_until = -1   # índice até onde devemos pular (continuação PRNs)
 
-    i = 0
-    n = len(data_block)
-    while i < n:
-        ln = data_block[i]
+    # 2) Loop principal usando for
+    for i in range(len(buffered_lines)):
+
+        # pula linhas de continuação do PRN-list
+        if i <= skip_until:
+            continue
+
+        ln = buffered_lines[i]
 
         if not ln.strip():
-            i += 1
             continue
 
         # Epoch
         if is_epoch_line_rinex2(ln):
-            # tempo: primeiros 29 chars como você já usa
             current_time = get_datetime(ln[:29])
 
-            prns, span = join_of_prns(data_block, i)
+            prns, span = join_of_prns(buffered_lines, i)
             time_prn[current_time] = prns
 
-            # PULA as linhas de continuação do PRN-list (isso evita cair em "R15R18" como se fosse dado)
-            i += span
+            # >>> define até onde pular (linhas de continuação do PRN-list)
+            skip_until = i + span - 1
             continue
 
-        # Linhas de observação (só depois que já existe epoch)
+        # Linhas de observação
         if current_time is not None:
             line = ln
             if len(line) < 80:
                 line = line.ljust(80)
             elif len(line) > 80:
                 line = line[:80]
+
             data_lines.append(line)
-
-        i += 1
-
-    if not time_prn:
-        raise ValueError("Nenhuma época encontrada. Verifique se o arquivo é RINEX 2 e se o regex está adequado.")
 
     return time_prn, data_lines
 
+import re
+import pandas as pd
+
+import math
+
+def lines_per_sat(num_of_obs: int) -> int:
+    # 80 chars por linha = 5 campos de 16; logo:
+    return int(math.ceil(num_of_obs / 5))
+
+
+_EPOCH_RE = re.compile(r"^\s*\d{2}\s+\d{1,2}\s+\d{1,2}\s+\d{1,2}\s+\d{1,2}\s+\d")
+
+def prn_time_and_data_deterministic(filepath, num_of_obs, encoding="utf-8"):
+    time_prn = {}
+    raw_data = []
+
+    lps = lines_per_sat(num_of_obs)
+
+    with open(filepath, "r", encoding=encoding, errors="replace") as f:
+        # pula header
+        for ln in f:
+            if ln[60:80].strip() == "END OF HEADER" or "END OF HEADER" in ln:
+                break
+
+        while True:
+            epoch = f.readline()
+            if not epoch:
+                break
+
+            if not epoch.strip():
+                continue
+
+            # garante que é epoch line mesmo
+            if not _EPOCH_RE.match(epoch):
+                continue
+
+            t = get_datetime(epoch[:29])
+            nsats = int(epoch[29:32].strip())  # se necessário, adapte com fallback
+
+            # PRN list: até 12 por linha
+            prn_lines = int(math.ceil(nsats / 12))
+            prn_block = epoch
+            for _ in range(prn_lines - 1):
+                cont = f.readline()
+                if not cont:
+                    raise ValueError("EOF inesperado ao ler continuação de PRNs.")
+                prn_block += cont
+
+            prns = rx.split_prns(prn_block)[:nsats]
+            if len(prns) != nsats:
+                raise ValueError(f"PRNs lidos ({len(prns)}) != nsats ({nsats}) no epoch {t}.")
+
+            time_prn[t] = prns
+
+            # agora lê exatamente as linhas de observação do epoch
+            n_obs_lines = nsats * lps
+            for _ in range(n_obs_lines):
+                obs_ln = f.readline()
+                if not obs_ln:
+                    raise ValueError(f"EOF inesperado lendo observações no epoch {t}.")
+                line = obs_ln.rstrip("\n")
+                if len(line) < 80:
+                    line = line.ljust(80)
+                elif len(line) > 80:
+                    line = line[:80]
+                raw_data.append(line)
+
+    return time_prn, raw_data
+
+
+
 def test_prn_time_and_data():
-    infile = 'F:\\database\\GNSS\\rinex\\2010\\001\\alar0011.10o' 
+    import GNSS as gs
+    station = 'salu'
     
-    time_prn, data_lines = prn_time_and_data(infile, encoding="utf-8") 
+    path = gs.paths(2010, 1, root = 'F:\\').fn_rinex(station)
     
-    time_prn
+    
+    time_prn, data_lines = prn_time_and_data(path, encoding="utf-8") 
+    times = list(time_prn.keys())
+    print(time_prn[times[0]])
+    
+# test_prn_time_and_data()
+    
