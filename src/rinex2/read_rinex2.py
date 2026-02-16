@@ -3,6 +3,25 @@ import pandas as pd
 import numpy as np
 
 
+def combine_better_obs(df):
+    counts = df.count()
+    C = counts[counts.index.str.startswith("C")]
+    P = counts[counts.index.str.startswith("P")]
+    L = counts[counts.index.str.startswith("L")]
+
+    CP = C if not C.empty else P
+    cp_pair = CP.nlargest(2).index.tolist()
+    l_pair  = L.nlargest(2).index.tolist()
+
+    result = []
+    if "prn" in df.columns:
+        result.append("prn")
+    result.extend(cp_pair)
+    result.extend(l_pair)
+    return result
+
+
+ 
 def pad_with_nan(arr, target_rows):
     """
     Completa array 2D com linhas NaN até atingir target_rows.
@@ -15,6 +34,40 @@ def pad_with_nan(arr, target_rows):
     pad = np.full((target_rows - n_rows, n_cols), np.nan)
     return np.vstack([arr, pad])
 
+    
+
+
+def _extend_obs_types(obs_lines_60):
+    """
+    Cada linha (60 chars) de '# / TYPES OF OBSERV' contém:
+    - nos 10 primeiros chars: N (apenas na primeira linha)
+    - depois: até 9 códigos de observáveis por linha
+    """
+    obs = []
+    for i, line60 in enumerate(obs_lines_60):
+        tail = line60[10:] if i == 0 else line60
+        obs.extend(tail.split())
+    return obs
+
+def _obs_type_lines(lines):
+    obs_types_lines = []
+    
+    for ln in lines:
+        
+        info = ln[:60]
+        label = ln[60:80].strip()
+    
+        if label == "END OF HEADER":
+            break
+        
+        if label == "# / TYPES OF OBSERV":
+            obs_types_lines.append(info)
+            
+    return _extend_obs_types(obs_types_lines)
+
+
+
+
 
 class Rinex2:
     """
@@ -26,37 +79,27 @@ class Rinex2:
       - entrega datasets e seleções por PRN
     """
 
-    def __init__(self, infile, drop_ssi_default=True):
+    def __init__(self, infile, drop_ssi_default=True, ):
         self.infile = infile
         self.drop_ssi_default = drop_ssi_default
+        
+        lines = rx.check_input_file(infile, encoding="utf-8")
+    
+        self.obs_names = _obs_type_lines(lines)
+ 
+        self.num_of_obs = len(self.obs_names)
 
-        # Header
-        self._header = rx.HeaderRINEX2(infile)
-        self.header = self._header.attrs
-        self.obs_names = list(self._header.obs_names)
-        self.num_of_obs = int(self._header.num_of_obs)
+        time_prns, data_list = rx.prn_time_and_data(lines) 
 
-        # Dados
-        time_prns, raw_data = rx.prn_time_and_data(infile)
-
+        data = rx.get_data_rows(data_list, time_prns, self.num_of_obs)
+       
         self.time_list, self.prns_list = rx.extend_lists(time_prns)
 
-        data_rows = rx.get_data_rows(raw_data, time_prns, self.num_of_obs)
-
-        self.obs, self.lli, self.ssi = rx.get_observables(data_rows, self.num_of_obs)
+    
+        self.obs, self.lli, self.ssi = rx.get_observables(
+            data, self.num_of_obs)
         
-        n_expected = len(self.time_list)
-        n_obs = self.obs.shape[0]
-        
-        if n_obs != n_expected:
-            diff = n_expected - n_obs
-            if diff > 0:
-                print(f"[WARN] Ajustando {diff} linhas faltantes com NaN")
-                self.obs = pad_with_nan(self.obs, n_expected)
-                self.lli = pad_with_nan(self.lli, n_expected)
-                self.ssi = pad_with_nan(self.ssi, n_expected)
-
-        # Cache para dfs
+      
         self._cache = {}
 
         # Checagem básica de consistência
@@ -103,7 +146,9 @@ class Rinex2:
         if drop_ssi:
             # remove S* e D*
             drop_cols = [c for c in df.columns
-                         if isinstance(c, str) and (c.startswith("S") or c.startswith("D"))]
+                         if isinstance(c, str) and 
+                         (c.startswith("S") or 
+                          c.startswith("D"))]
             df = df.drop(columns=drop_cols, errors="ignore")
 
         if multiindex:
@@ -115,15 +160,23 @@ class Rinex2:
 
     def dataset(self, values="obs", drop_ssi=None):
         """
-        Retorna DataFrame com index=time e coluna 'prn' (compatível com seu estilo antigo).
+        Retorna DataFrame com index=time e coluna 'prn' 
+        (compatível com seu estilo antigo).
         """
-        return self._make_df(values=values, drop_ssi=drop_ssi, multiindex=False)
+        return self._make_df(
+            values=values, 
+            drop_ssi=drop_ssi, 
+            multiindex=False)
 
     def dataset_mi(self, values="obs", drop_ssi=None):
         """
         Retorna DataFrame com MultiIndex (time, prn).
         """
-        return self._make_df(values=values, drop_ssi=drop_ssi, multiindex=True)
+        return self._make_df(
+            values=values, 
+            drop_ssi=drop_ssi, 
+            multiindex=True
+            )
 
     def set_prn_obs(self, prn, drop_ssi=None):
         """
@@ -138,7 +191,8 @@ class Rinex2:
         if df.shape[1] == 4:
             return df
 
-        cols = [c for c in rx.combine_better_obs(df.assign(prn=prn)) if c != "prn"]
+        cols = [c for c in combine_better_obs(df.assign(prn=prn)) 
+                if c != "prn"]
         cols = [c for c in cols if c in df.columns]
         return df[cols]
 
@@ -149,7 +203,8 @@ class Rinex2:
         lli = self.dataset(values="lli", drop_ssi=drop_ssi)
         lli = lli.loc[lli["prn"] == prn, cols]
 
-        lli = lli[[c for c in lli.columns if isinstance(c, str) and c.startswith("L")]]
+        lli = lli[[c for c in lli.columns 
+                   if isinstance(c, str) and c.startswith("L")]]
         lli.columns = [f"{c}_lli" for c in lli.columns]
         return lli
 
@@ -166,12 +221,32 @@ class Rinex2:
         return out.dropna() if dropna else out
 
 
-def test_main():
-    infile = 'F:\\database\\GNSS\\rinex\\2010\\001\\alar0011.10o' 
-    rnx = Rinex2(infile)
-    
-    print(rnx.prns)
-    
-    df = rnx.sel("G26")
-    df_all = rnx.dataset_mi(values="obs")
-    df 
+
+def sel_rinex(files_in):
+   
+    return [f for f in files_in if f.endswith('o')][0]
+ #
+# import GNSS as gs 
+# import zipfile 
+# import io
+# import os 
+# path = gs.paths(2009, 1)
+
+# zfile = os.listdir(path.rinex)[0]
+# station_path = path.fn_rinex(zfile, zip_f = True)
+# files_in = zipfile.ZipFile(station_path).namelist()
+
+# fn = sel_rinex(files_in)
+
+# path_zip = gs.open_zip_rinex(station_path, fn)
+
+# # z = zipfile.ZipFile(path.rinex)
+
+# # # for fn in z.namelist():
+# # fn =  z.namelist()[0]
+# # path_zip = io.TextIOWrapper(z.open(fn))
+
+# # # # ob = HeaderRINEX2(path_zip)
+
+# Rinex2(path_zip).prns 
+
