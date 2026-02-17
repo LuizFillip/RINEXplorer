@@ -1,4 +1,4 @@
-# import RINExplorer as rx 
+import re
 import numpy as np 
 
 def floatornan(x):
@@ -12,9 +12,6 @@ def digitorzero(x):
         return 0
     else:
         return int(x)
-
-
-
 
 def get_observables(data, num_of_obs):
     
@@ -41,8 +38,6 @@ def test_lengths(prns_list, time_list, data):
     
 def test_length_element(data):
     assert list(set([len(ln) for ln in data]))[0] == 80
-
-import re
 
 def normalize_prns(prns):
     """
