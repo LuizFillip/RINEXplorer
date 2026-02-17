@@ -1,4 +1,4 @@
-import RINExplorer as rx 
+import xrinex as rx 
 import pandas as pd 
 import numpy as np
 
@@ -222,31 +222,5 @@ class Rinex2:
 
 
 
-def sel_rinex(files_in):
-   
-    return [f for f in files_in if f.endswith('o')][0]
- #
-# import GNSS as gs 
-# import zipfile 
-# import io
-# import os 
-# path = gs.paths(2009, 1)
 
-# zfile = os.listdir(path.rinex)[0]
-# station_path = path.fn_rinex(zfile, zip_f = True)
-# files_in = zipfile.ZipFile(station_path).namelist()
-
-# fn = sel_rinex(files_in)
-
-# path_zip = gs.open_zip_rinex(station_path, fn)
-
-# # z = zipfile.ZipFile(path.rinex)
-
-# # # for fn in z.namelist():
-# # fn =  z.namelist()[0]
-# # path_zip = io.TextIOWrapper(z.open(fn))
-
-# # # # ob = HeaderRINEX2(path_zip)
-
-# Rinex2(path_zip).prns 
 
